@@ -39,3 +39,8 @@
 ## 5. Deployment
 - **Platform:** Vercel/Netlify.
 - **Environment:** Production-ready frontend with optimized assets.
+
+## 6. Deployment & Environment Standards
+- **Case Sensitivity:** Always use exact case-matching for file imports (e.g., `.PNG` vs `.png`). Local Windows environments are case-insensitive, but deployment environments (Netlify/Linux) are case-sensitive.
+- **Favicon:** The project uses `public/favicon.png` (derived from the brand logo).
+- **Build:** Standard `npm run build` using Vite.
