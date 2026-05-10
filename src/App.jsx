@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Logo from './assets/3Dfier_Logo.png';
+import Logo from './assets/3Dfier_Logo.PNG';
 import { 
   Printer, 
   Box, 
