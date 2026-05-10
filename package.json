@@ -13,10 +13,10 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.475.0",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "sharp": "^0.34.5"
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
+    "sharp": "^0.34.5",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

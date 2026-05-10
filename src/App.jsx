@@ -22,10 +22,17 @@ import {
 // Dynamic import for gallery images
 const galleryImages = import.meta.glob('./assets/gallery/webp/**/*.{webp,WEBP}', { eager: true, as: 'url' });
 
+console.log('Loaded gallery images:', Object.keys(galleryImages).length);
+
 const getCategoryImages = (category) => {
-  return Object.entries(galleryImages)
-    .filter(([path]) => path.includes(category))
-    .map(([__, url]) => url);
+  try {
+    return Object.entries(galleryImages)
+      .filter(([path]) => path.includes(category))
+      .map(([__, url]) => url?.default || url);
+  } catch (error) {
+    console.error('Error loading images for category:', category, error);
+    return [];
+  }
 };
 
 const Navbar = () => {
