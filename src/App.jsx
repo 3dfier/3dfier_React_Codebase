@@ -7,10 +7,8 @@ import {
   MessageSquare, 
   Upload, 
   Mail, 
-  Phone, 
   MapPin, 
   Instagram, 
-  Twitter, 
   Linkedin,
   Youtube,
   MessageCircle,
@@ -27,7 +25,7 @@ const galleryImages = import.meta.glob('./assets/gallery/webp/**/*.{webp,WEBP}',
 const getCategoryImages = (category) => {
   return Object.entries(galleryImages)
     .filter(([path]) => path.includes(category))
-    .map(([_, url]) => url);
+    .map(([__, url]) => url);
 };
 
 const Navbar = () => {
@@ -38,8 +36,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
-            <img src={Logo} alt="3dfier Logo" className="h-12 w-auto" />
-            <span className="ml-3 text-2xl font-bold tracking-tight bg-brand-gradient bg-clip-text text-transparent uppercase text-slate-100">3dfier</span>
+            <img src={Logo} alt="3dfier Logo" className="h-10 w-auto" />
           </div>
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
@@ -175,29 +172,50 @@ const ScrollReveal = ({ children }) => (
   </motion.div>
 );
 
+const useWindowSize = () => {
+  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  React.useEffect(() => {
+    const handleResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return size;
+};
+
 const PortfolioModal = ({ isOpen, onClose, category, images }) => {
   const [viewedImage, setViewedImage] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [isAutoRotating, setIsAutoRotating] = useState(true);
+  const { width } = useWindowSize();
 
-  // Dynamic radius based on image count to prevent overlap
-  const radius = Math.max(800, images.length * 45); 
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+
+  // Responsive sizes
+  const cardSize = isMobile ? 220 : isTablet ? 280 : 320;
+  const baseRadius = isMobile ? 500 : isTablet ? 700 : 900;
+  // Increase radius more aggressively to prevent overlap (using arc length formula)
+  const radius = Math.max(baseRadius, (images.length * cardSize) / (Math.PI * 1.5)); 
   const angleStep = 360 / images.length;
 
-  const nextImage = (e) => {
+  const nextImage = React.useCallback((e) => {
     e?.stopPropagation();
-    const nextIdx = (activeIndex + 1) % images.length;
-    setActiveIndex(nextIdx);
-    setViewedImage(images[nextIdx]);
-  };
+    setActiveIndex((prev) => {
+      const nextIdx = (prev + 1) % images.length;
+      setViewedImage(images[nextIdx]);
+      return nextIdx;
+    });
+  }, [images]);
   
-  const prevImage = (e) => {
+  const prevImage = React.useCallback((e) => {
     e?.stopPropagation();
-    const prevIdx = (activeIndex - 1 + images.length) % images.length;
-    setActiveIndex(prevIdx);
-    setViewedImage(images[prevIdx]);
-  };
+    setActiveIndex((prev) => {
+      const prevIdx = (prev - 1 + images.length) % images.length;
+      setViewedImage(images[prevIdx]);
+      return prevIdx;
+    });
+  }, [images]);
 
   // Auto-rotation effect
   React.useEffect(() => {
@@ -211,12 +229,7 @@ const PortfolioModal = ({ isOpen, onClose, category, images }) => {
   }, [isOpen, viewedImage, isAutoRotating]);
 
   React.useEffect(() => {
-    if (!isOpen) {
-      setViewedImage(null);
-      setActiveIndex(0);
-      setRotation(0);
-      return;
-    }
+    if (!isOpen) return;
 
     const handleKeyDown = (e) => {
       if (viewedImage) {
@@ -230,7 +243,7 @@ const PortfolioModal = ({ isOpen, onClose, category, images }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, viewedImage, images.length, onClose]);
+  }, [isOpen, viewedImage, nextImage, prevImage, onClose]);
 
   return (
     <AnimatePresence>
@@ -258,7 +271,7 @@ const PortfolioModal = ({ isOpen, onClose, category, images }) => {
 
           {/* 3D Scene Container */}
           <div 
-            className="flex-1 relative flex items-center justify-center perspective-[3000px]"
+            className={`flex-1 relative flex items-center justify-center ${isMobile ? 'perspective-[1200px]' : 'perspective-[3000px]'}`}
             onClick={(e) => e.stopPropagation()}
             onMouseEnter={() => setIsAutoRotating(false)}
             onMouseLeave={() => setIsAutoRotating(true)}
@@ -267,11 +280,11 @@ const PortfolioModal = ({ isOpen, onClose, category, images }) => {
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               onDrag={(_, info) => {
-                setRotation(prev => prev + info.delta.x * 0.1);
+                setRotation(prev => prev + info.delta.x * (isMobile ? 0.2 : 0.1));
               }}
               style={{
-                width: '300px',
-                height: '300px',
+                width: isMobile ? '200px' : '300px',
+                height: isMobile ? '200px' : '300px',
                 position: 'relative',
                 transformStyle: 'preserve-3d',
                 rotateY: rotation,
@@ -280,23 +293,24 @@ const PortfolioModal = ({ isOpen, onClose, category, images }) => {
             >
               {images.map((img, idx) => {
                 const angle = idx * angleStep;
-                const yOffset = (idx - images.length / 2) * 25; // Smaller spiral offset
+                // Increase vertical spread to create a proper helix and avoid vertical overlap
+                const yOffset = (idx - images.length / 2) * (isMobile ? 35 : 60); 
 
                 return (
                   <div
                     key={idx}
                     style={{
                       position: 'absolute',
-                      width: '320px',
-                      height: '320px',
+                      width: `${cardSize}px`,
+                      height: `${cardSize}px`,
                       transform: `rotateY(${angle}deg) translateZ(${radius}px) translateY(${yOffset}px)`,
                       transformStyle: 'preserve-3d',
                     }}
                   >
                     <motion.div
-                      whileHover={{ scale: 1.15, translateZ: 50 }}
+                      whileHover={{ scale: isMobile ? 1.05 : 1.15, translateZ: isMobile ? 20 : 50 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className="w-full h-full rounded-[2.5rem] overflow-hidden border-2 border-slate-800 bg-slate-900 shadow-2xl transition-colors hover:border-brand-orange group cursor-pointer"
+                      className="w-full h-full rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border-2 border-slate-800 bg-slate-900 shadow-2xl transition-colors hover:border-brand-orange group cursor-pointer"
                       onClick={() => {
                         setActiveIndex(idx);
                         setViewedImage(img);
@@ -419,6 +433,7 @@ const Portfolio = () => {
       </div>
 
       <PortfolioModal 
+        key={selectedCategory?.id || 'none'}
         isOpen={!!selectedCategory} 
         onClose={() => setSelectedCategory(null)}
         category={selectedCategory?.title}
@@ -587,7 +602,7 @@ const Footer = () => (
   <footer className="py-12 border-t border-slate-800 px-4">
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
       <div className="flex items-center">
-        <span className="text-2xl font-bold bg-brand-gradient bg-clip-text text-transparent uppercase tracking-tight">3dfier</span>
+        <img src={Logo} alt="3dfier Logo" className="h-8 w-auto grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all" />
       </div>
       
       <div className="flex items-center gap-6 text-slate-500">
@@ -607,6 +622,24 @@ const Footer = () => (
   </footer>
 );
 
+const WhatsAppButton = () => (
+  <motion.a
+    href="https://wa.me/918605067506"
+    target="_blank"
+    rel="noopener noreferrer"
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.9 }}
+    className="fixed bottom-8 right-8 z-[90] w-14 h-14 bg-green-500 text-white rounded-full flex items-center justify-center shadow-2xl shadow-green-500/20 hover:bg-green-600 transition-colors group"
+  >
+    <MessageCircle size={32} />
+    <span className="absolute right-full mr-4 px-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+      Chat with us
+    </span>
+  </motion.a>
+);
+
 const App = () => {
   return (
     <div className="text-slate-100 selection:bg-brand-orange selection:text-white overflow-x-hidden">
@@ -622,6 +655,7 @@ const App = () => {
       </ScrollReveal>
       
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 };
